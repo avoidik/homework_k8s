@@ -1,0 +1,9 @@
+name: example
+version: 0.1.0
+appVersion: 0.1.0
+description: Kubernetes Homework
+sources:
+- https://github.com/stantonk/java-docker-example
+maintainers:
+- name: viacheslav
+  email: avoidik@gmail.com

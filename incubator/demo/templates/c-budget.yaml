@@ -1,0 +1,17 @@
+{{- if .Values.jexmpl.podDisruptionBudget -}}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app: {{ template "jexmpl.name" . }}
+    chart: {{ template "jexmpl.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+  name: {{ template "jexmpl.fullname" . }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "jexmpl.name" . }}
+      release: {{ .Release.Name }}
+{{ toYaml .Values.jexmpl.podDisruptionBudget | indent 2 }}
+{{- end -}}

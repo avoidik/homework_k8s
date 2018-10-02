@@ -1,0 +1,117 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: {{ template "jexmpl.fullname" . }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/a-configmap.yaml") . | sha256sum }}
+  labels:
+    app: {{ template "jexmpl.name" . }}
+    chart: {{ template "jexmpl.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ .Values.jexmpl.replicas }}
+  serviceName: {{ template "jexmpl.fullname" . }}-headless
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ template "jexmpl.name" . }}
+        release: "{{ .Release.Name }}"
+{{- if .Values.jexmpl.podAnnotations }}
+      annotations:
+{{ toYaml .Values.jexmpl.podAnnotations | indent 8 }}
+{{- end }}
+    spec:
+      securityContext:
+{{ toYaml .Values.jexmpl.securityContext | indent 8 }}
+    {{- with .Values.jexmpl.image.pullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      initContainers:
+        - name: wait-for-mysql
+          image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
+          imagePullPolicy: {{ .Values.init.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              until printf "." && nc -z -w 2 {{ template "jexmpl.mysql.fullname" . }} {{ .Values.mysql.service.port }}; do
+                  sleep 2;
+              done;
+
+              echo 'MySQL OK ✓'
+      {{- if .Values.jexmpl.extraInitContainers }}
+{{ tpl .Values.jexmpl.extraInitContainers . | indent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.jexmpl.image.repository }}:{{ .Values.jexmpl.image.tag }}"
+          imagePullPolicy: {{ .Values.jexmpl.image.pullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              dockerize -wait tcp://$DB_IP:$DB_PORT -timeout 100s /usr/bin/java -jar /srv/java-docker-example/java-docker-example.jar server /srv/java-docker-example/config.yml
+          env:
+            - name: DB_IP
+              value: {{ template "jexmpl.mysql.fullname" . }}
+            - name: DB_PORT
+              value: {{ .Values.mysql.service.port | quote }}
+            - name: DB_DATABASE
+              value: {{ .Values.mysql.mysqlDatabase | quote }}
+            - name: DB_USER
+              value: {{ .Values.mysql.mysqlUser | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "jexmpl.mysql.fullname" . }}
+                  key: mysql-password
+{{- with .Values.jexmpl.extraEnv }}
+{{ tpl . $ | indent 12 }}
+{{- end }}
+          volumeMounts:
+{{- with .Values.jexmpl.extraVolumeMounts }}
+{{ tpl . $ | indent 12 }}
+{{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.jexmpl.basepath | quote }}
+              port: http
+            initialDelaySeconds: {{ .Values.jexmpl.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.jexmpl.livenessProbe.timeoutSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.jexmpl.basepath | quote }}
+              port: http
+            initialDelaySeconds: {{ .Values.jexmpl.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.jexmpl.readinessProbe.timeoutSeconds }}
+          resources:
+{{ toYaml .Values.jexmpl.resources | indent 12 }}
+{{- with .Values.jexmpl.extraContainers }}
+{{ tpl . $ | indent 8 }}
+{{- end }}
+    {{- with .Values.jexmpl.affinity }}
+      affinity:
+{{ tpl . $ | indent 8 }}
+    {{- end }}
+    {{- with .Values.jexmpl.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.jexmpl.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      terminationGracePeriodSeconds: 60
+      volumes:
+{{- with .Values.jexmpl.extraVolumes }}
+{{ tpl . $ | indent 8 }}
+{{- end }}

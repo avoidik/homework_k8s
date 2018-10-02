@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "jexmpl.fullname" . }}-headless
+  labels:
+    app: {{ template "jexmpl.name" . }}
+    chart: {{ template "jexmpl.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: {{ .Values.jexmpl.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: {{ template "jexmpl.name" . }}
+    release: "{{ .Release.Name }}"
