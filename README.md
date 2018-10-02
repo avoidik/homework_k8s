@@ -68,26 +68,26 @@ You may try [ngrok](https://ngrok.com/) as the last chance option
 
 1. Can we do a HA of a database? Any way to keep the data persistent when pods are recreated?
 
-We have stateless frontend, but stateful backend. Of course we can have HA configuration in such configuration.
+   We have stateless frontend, but stateful backend. Of course we can have HA configuration in such configuration.
 
-We can set following option to helm to enable HA:
+   We can set following option to helm to enable HA:
 
-```
---set mysql.persistence.enabled=true
-```
+   ```
+   --set mysql.persistence.enabled=true
+   ```
 
 1. Add CI to the deployment process.
 
-Just combine shell scripts from workflow above
+   Just combine shell scripts from workflow above
 
 1. Split your deployment into prd/qa/dev environment.
 
-Tweak .env file
+   Tweak .env file
 
 1. Please suggest a monitoring solutions for your system. How would you notify an admin
 that the resources are scarce?
 
-A lot of option, you may want to start from prometheus-operator from coreos
+   A lot of option, you may want to start from prometheus-operator from coreos
 
 ## Copyright
 
